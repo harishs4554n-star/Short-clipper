@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shorts Clipper</title>
+<style>
+  body { font-family: sans-serif; margin: 0; padding: 16px; background: #111; color: #eee; }
+  h1 { font-size: 20px; }
+  input, button { width: 100%; box-sizing: border-box; padding: 12px; font-size: 16px; margin-top: 8px; border-radius: 8px; border: none; }
+  button { background: #ff3b30; color: white; font-weight: bold; }
+  .card { background: #222; padding: 12px; border-radius: 10px; margin-top: 14px; }
+  .row { display: flex; gap: 8px; }
+  .row input { width: 50%; }
+  .reason { font-size: 13px; color: #aaa; }
+  a.dl { display: block; margin-top: 8px; color: #4cd964; }
+  iframe { width: 100%; aspect-ratio: 16/9; border: 0; border-radius: 8px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<h1>Shorts Clipper</h1>
+<input id="url" placeholder="Paste YouTube link">
+<button onclick="analyze()">Find best clips</button>
+<div id="msg"></div>
+<div id="list"></div>
+
+<script>
+let VID = "";
+function fmt(s) { return Math.floor(s/60) + ":" + String(s%60).padStart(2, "0"); }
+
+async function analyze() {
+  const msg = document.getElementById("msg");
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  msg.textContent = "Finding best moments... this can take a minute.";
+  const r = await fetch("/api/analyze", { method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ url: document.getElementById("url").value }) });
+  const d = await r.json();
+  if (d.error) { msg.textContent = d.error; return; }
+  VID = d.video_id;
+  msg.textContent = d.clips.length + " clips found.";
+  d.clips.forEach((c, i) => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML =
+      "<b>" + c.title + "</b>" +
+      "<div class='reason'>" + c.reason + "</div>" +
+      "<iframe id='p" + i + "' src='https://www.youtube.com/embed/" + VID + "?start=" + c.start + "&end=" + c.end + "'></iframe>" +
+      "<div class='row'><input id='s" + i + "' type='number' value='" + c.start + "'>" +
+      "<input id='e" + i + "' type='number' value='" + c.end + "'></div>" +
+      "<div class='reason'>Start and end in seconds (" + fmt(c.start) + " to " + fmt(c.end) + ")</div>" +
+      "<button onclick='cut(" + i + ")'>Cut vertical clip</button>" +
+      "<div id='o" + i + "'></div>";
+    list.appendChild(div);
+  });
+}
+
+async function cut(i) {
+  const out = document.getElementById("o" + i);
+  out.textContent = "Cutting... please wait.";
+  const start = document.getElementById("s" + i).value;
+  const end = document.getElementById("e" + i).value;
+  const r = await fetch("/api/cut", { method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ video_id: VID, start: start, end: end }) });
+  const { job_id } = await r.json();
+  const timer = setInterval(async () => {
+    const s = await (await fetch("/api/status/" + job_id)).json();
+    if (s.status === "done") {
+      clearInterval(timer);
+      out.innerHTML = "<a class='dl' href='/clips/" + job_id + ".mp4'>Download clip</a>";
+    } else if (s.status === "error") {
+      clearInterval(timer);
+      out.textContent = "Cutting failed. Use the timestamps " + fmt(+start) + " to " + fmt(+end) + " in CapCut instead.";
+    }
+  }, 4000);
+}
+</script>
+</body>
+</html>
