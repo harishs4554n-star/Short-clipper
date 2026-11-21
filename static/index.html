@@ -7,7 +7,7 @@
 <style>
   body { font-family: sans-serif; margin: 0; padding: 16px; background: #111; color: #eee; }
   h1 { font-size: 20px; }
-  input, button { width: 100%; box-sizing: border-box; padding: 12px; font-size: 16px; margin-top: 8px; border-radius: 8px; border: none; }
+  input, textarea, button { width: 100%; box-sizing: border-box; padding: 12px; font-size: 16px; margin-top: 8px; border-radius: 8px; border: none; }
   button { background: #ff3b30; color: white; font-weight: bold; }
   .card { background: #222; padding: 12px; border-radius: 10px; margin-top: 14px; }
   .row { display: flex; gap: 8px; }
@@ -20,6 +20,7 @@
 <body>
 <h1>Shorts Clipper</h1>
 <input id="url" placeholder="Paste YouTube link">
+<textarea id="tr" rows="6" placeholder="Paste the transcript here"></textarea>
 <button onclick="analyze()">Find best clips</button>
 <div id="msg"></div>
 <div id="list"></div>
@@ -35,7 +36,8 @@ async function analyze() {
   msg.textContent = "Finding best moments... this can take a minute.";
   const r = await fetch("/api/analyze", { method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ url: document.getElementById("url").value }) });
+    body: JSON.stringify({ url: document.getElementById("url").value,
+                           transcript: document.getElementById("tr").value }) });
   const d = await r.json();
   if (d.error) { msg.textContent = d.error; return; }
   VID = d.video_id;
