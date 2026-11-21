@@ -22,7 +22,7 @@ def pick_clips(transcript_text):
         "end (seconds, integer), title (short), reason (one sentence).\n\n" + transcript_text[:60000]
     )
     url = ("https://generativelanguage.googleapis.com/v1beta/models/"
-           "gemini-1.5-flash:generateContent?key=" + GEMINI_KEY)
+           "gemini-3.8-flash:generateContent?key=" + GEMINI_KEY)
     r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}],
                                  "generationConfig": {"responseMimeType": "application/json"}}, timeout=120)
     r.raise_for_status()
